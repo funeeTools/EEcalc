@@ -1,5 +1,7 @@
 # EEcalc
 
+Launch the EEcalc webapp--> [https://funeetools.github.io/EEcalc/](https://funeetools.github.io/EEcalc/)
+
 Local-first electronics and RF calculators, built on the layout of the EE Calculator app: inputs on the left, a live graph top-right, tabbed results below it, and
 theory & equations below the fold. Everything runs in the browser (TypeScript, no server), so it works offline
 and is hosted as static files on GitHub Pages.
