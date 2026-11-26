@@ -10,7 +10,7 @@ import { Form } from '@/core/form/form';
 import { Plot, type PlotConfig } from '@/core/plot/plot';
 import { SmithChart } from '@/core/plot/smith';
 import { buildCalcPage, type CalcSlots } from '@/core/ui/calc-page';
-import { h, clear, debounce, storage, symNodes } from '@/core/ui/dom';
+import { h, clear, debounce, downloadFile, storage, symNodes } from '@/core/ui/dom';
 import { settings, onSettings } from '@/core/settings';
 import { si } from '@/core/units';
 import { applyDefValues, applyUnitPrefs, findField, getPath, setPath } from './fields';
@@ -46,6 +46,24 @@ export interface CalcModule {
   /** The calculator's circuit / cross-section / block diagram, shown in its own tab */
   diagram?: DiagramSpec;
   view?: CalcView;
+}
+
+/** Another version of the open calculator, listed in the title bar's version menu */
+export interface VersionLink {
+  id: string;
+  label: string;
+  isDefault: boolean;
+  /** Loads that version's module to read its def.version */
+  version: () => Promise<string>;
+}
+
+/** How the page names itself: which version this is and which others exist */
+export interface PageInfo {
+  /** This version's name ("Standard", "Basic"); shown only when other versions exist */
+  versionLabel?: string;
+  /** False on a version other than the default */
+  isDefault?: boolean;
+  versions?: VersionLink[];
 }
 
 const PALETTE = ['#1f4e5f', '#c47b17', '#4f8a8b', '#8b1e1e', '#6b5b95', '#2f7d4f', '#9a8f7a', '#386a77'];
@@ -230,6 +248,7 @@ export class CalcController {
     readonly title: string,
     readonly mod: CalcModule,
     initial?: Record<string, unknown>,
+    readonly info: PageInfo = {},
   ) {
     this.def = mod.def;
     this.slots = buildCalcPage(container);
@@ -243,6 +262,7 @@ export class CalcController {
     this.sideHost = h('div', { class: 'graph-side', hidden: true });
     this.diagramHost = h('div', { class: 'graph-diagram' });
     this.slots.graph.append(this.mainHost, this.sideHost, this.diagramHost);
+    this.buildTitleBar();
     this.buildToolbar();
 
     // Tabs: Results is always first (the main answer view).
@@ -424,6 +444,63 @@ export class CalcController {
 
   // ───────────────────────────────── UI ─────────────────────────────────
 
+  /** Title bar: the calculator's name, its version label when it has others, and the version button. */
+  private buildTitleBar(): void {
+    const bar = this.slots.titleBar;
+    const others = this.info.versions ?? [];
+    const alt = this.info.isDefault === false;
+    const v = this.def.version;
+    bar.append(h('h1', { class: 'calc-title', title: this.title }, this.title));
+    if (others.length && this.info.versionLabel) bar.append(h('span', { class: `version-tag${alt ? ' alt' : ''}`, title: alt ? 'Not the default version of this calculator' : '' }, this.info.versionLabel));
+    const pop = h('div', { class: 'version-pop', role: 'menu', hidden: true });
+    const btn = h(
+      'button',
+      {
+        class: `version-btn${alt ? ' alt' : ''}`,
+        type: 'button',
+        'aria-haspopup': 'menu',
+        'aria-expanded': 'false',
+        title: others.length ? `Version ${v}: click for the other versions of this calculator` : `Calculator version ${v}`,
+        onclick: () => (pop.hidden ? open() : close()),
+      },
+      `v${v}`,
+      others.length ? h('span', { class: 'version-caret', 'aria-hidden': 'true' }, '▾') : null,
+    );
+    bar.append(btn, pop);
+
+    const row = (version: string, label: string, isDefault: boolean, here: boolean, href?: string) => {
+      const ver = h('span', { class: 'vp-ver' }, version);
+      const body = [ver, h('span', { class: 'vp-label' }, label), isDefault ? h('span', { class: 'vp-note' }, 'default') : null, here ? h('span', { class: 'vp-note vp-here' }, 'open') : null];
+      const el = href ? h('a', { class: 'vp-row', role: 'menuitem', href, onclick: () => close() }, ...body) : h('div', { class: 'vp-row here' }, ...body);
+      return { el, ver };
+    };
+    const open = () => {
+      clear(pop);
+      pop.append(h('div', { class: 'vp-head' }, 'Versions'));
+      pop.append(row(`v${v}`, this.info.versionLabel ?? this.title, !alt && others.length > 0, true).el);
+      for (const o of others) {
+        const r = row('v…', o.label, o.isDefault, false, `#/${o.id}`);
+        pop.append(r.el);
+        o.version().then((x) => (r.ver.textContent = `v${x}`), () => (r.ver.textContent = 'v?'));
+      }
+      pop.append(h('p', { class: 'vp-foot' }, others.length ? 'Each version is a separate calculator with its own saved inputs.' : 'This is the only version so far. Older major versions appear here once a calculator gets one.'));
+      pop.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+    };
+    const close = () => {
+      pop.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    };
+    const outside = (e: Event) => !pop.hidden && !bar.contains(e.target as Node) && close();
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    document.addEventListener('click', outside);
+    document.addEventListener('keydown', esc);
+    this.cleanups.push(() => {
+      document.removeEventListener('click', outside);
+      document.removeEventListener('keydown', esc);
+    });
+  }
+
   private buildToolbar(): void {
     const tb = this.slots.inputsToolbar;
     tb.append(h('span', { class: 'toolbar-title' }, 'Inputs'));
@@ -450,7 +527,6 @@ export class CalcController {
           this.replaceState(freshDefaults(this.def));
         },
       }, 'Reset'),
-      h('span', { class: 'toolbar-version', title: `Calculator version ${this.def.version}` }, `v${this.def.version}`),
     );
   }
 
@@ -675,10 +751,5 @@ export function graphToCsv(g: GraphSpec): string {
 }
 
 function downloadCsv(g: GraphSpec, calcId: string): void {
-  const blob = new Blob([graphToCsv(g)], { type: 'text/csv' });
-  const a = h('a', { href: URL.createObjectURL(blob), download: `${calcId.replace(/\//g, '_')}_${g.id}.csv` });
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  downloadFile(`${calcId.replace(/[/@]/g, '_')}_${g.id}.csv`, graphToCsv(g), 'text/csv');
 }

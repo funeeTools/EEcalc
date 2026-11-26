@@ -2,6 +2,11 @@
  * Categories and calculators. The full list comes from roadmap.ts (every planned calculator);
  * READY maps an id to its lazy-loaded module. Everything else shows as a placeholder page.
  * Ids are "<category>/<slug>" and double as the route (#/rf/microstrip-impedance) and the AI API id.
+ *
+ * Other versions of a calculator (an older major version kept after an overhaul, or a deliberately
+ * different variant) are separate calculators with ids "<category>/<slug>@<key>". They have their own
+ * module, saved inputs and NOTES.md, are left out of the menus and the finder, and are reached from the
+ * version button in the page's title bar (style guide §13a).
  */
 
 import type { CalcModule } from '@/core/calc/page';
@@ -16,6 +21,12 @@ export interface CalcEntry {
   tab?: string;
   blurb: string;
   load?: () => Promise<{ default: CalcModule }>;
+  /** Name of this version in the version menu ("Standard", "Basic", "v1 line") */
+  versionLabel?: string;
+  /** Other versions: on the default entry, every other version; on a version, the default and its siblings */
+  versions?: CalcEntry[];
+  /** On another version: the default calculator's id */
+  baseId?: string;
 }
 
 export interface Category {
@@ -33,6 +44,10 @@ interface Ready {
   load: () => Promise<{ default: CalcModule }>;
   /** Not in the roadmap list: insert into this category */
   extra?: boolean;
+  /** Name of the default version in the version menu (only needed when `versions` is given) */
+  versionLabel?: string;
+  /** Other versions of this calculator; `key` becomes the id suffix "@key" and must never change */
+  versions?: { key: string; label: string; blurb: string; load: () => Promise<{ default: CalcModule }> }[];
 }
 
 const READY: Record<string, Ready> = {
@@ -130,6 +145,15 @@ const READY: Record<string, Ready> = {
   'power/voltage-divider': {
     blurb: 'Resistive divider: solve Vout, Vin, R₁ or R₂ with optional load, best E-series pair and worst-case tolerance.',
     load: () => import('@/calculators/voltage-divider'),
+    versionLabel: 'Standard',
+    versions: [
+      {
+        key: 'basic',
+        label: 'Basic',
+        blurb: 'The bare divider: Vin, R₁, R₂ and Vout, solve for any one. No load, parts search or tolerance.',
+        load: () => import('@/calculators/voltage-divider/versions/basic'),
+      },
+    ],
   },
   'power/led-resistor': {
     blurb: 'Series resistor for one or more LEDs: standard value, current spread with Vf, resistor power and efficiency.',
@@ -498,6 +522,9 @@ const READY: Record<string, Ready> = {
   },
 };
 
+/** Every calculator that is not the default version, keyed by its "<category>/<slug>@<key>" id */
+export const OTHER_VERSIONS = new Map<string, { cat: Category; calc: CalcEntry }>();
+
 export const CATEGORIES: Category[] = ROADMAP.map((cat) => {
   const calcs: CalcEntry[] = cat.calcs.map((c) => {
     const id = `${cat.id}/${c.slug}`;
@@ -513,11 +540,27 @@ export const CATEGORIES: Category[] = ROADMAP.map((cat) => {
   return { id: cat.id, title: cat.title, short: cat.short, icon: cat.icon, calcs };
 });
 
+for (const cat of CATEGORIES) {
+  for (const base of cat.calcs) {
+    const r = READY[base.id];
+    if (!r?.versions?.length) continue;
+    base.versionLabel = r.versionLabel ?? 'Default';
+    const others: CalcEntry[] = r.versions.map((v) => ({ id: `${base.id}@${v.key}`, slug: `${base.slug}@${v.key}`, title: base.title, tab: base.tab, blurb: v.blurb, load: v.load, versionLabel: v.label, baseId: base.id }));
+    base.versions = others;
+    for (const o of others) {
+      o.versions = [base, ...others.filter((x) => x !== o)];
+      OTHER_VERSIONS.set(o.id, { cat, calc: o });
+    }
+  }
+}
+
 export const ALL_CALCS: { cat: Category; calc: CalcEntry }[] = CATEGORIES.flatMap((cat) => cat.calcs.map((calc) => ({ cat, calc })));
 
 export const DEFAULT_ROUTE = { cat: 'rf', calc: 'microstrip-impedance' };
 
+/** Find by category and slug; the slug may name another version ("voltage-divider@basic"). */
 export function findCalc(catId: string, slug: string): { cat: Category; calc: CalcEntry } | null {
+  if (slug.includes('@')) return OTHER_VERSIONS.get(`${catId}/${slug}`) ?? null;
   return ALL_CALCS.find((x) => x.cat.id === catId && x.calc.slug === slug) ?? null;
 }
 
@@ -526,6 +569,7 @@ export function lookupCalc(idOrName: string): { cat: Category; calc: CalcEntry }
   const q = idOrName.trim().replace(/^#?\/?/, '').replace(/\/$/, '').toLowerCase();
   return (
     ALL_CALCS.find((x) => x.calc.id === q) ??
+    OTHER_VERSIONS.get(q) ??
     ALL_CALCS.find((x) => x.calc.slug === q) ??
     ALL_CALCS.find((x) => x.calc.title.toLowerCase() === q) ??
     null

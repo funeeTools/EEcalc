@@ -10,9 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **MINOR** (0.1.0 → 0.2.0): deliberate changes in behaviour or features.
 - **MAJOR** (0.x → 1.0.0): an overhaul that makes it a different thing, or a changed AI API contract.
 
-Versions below 1.0.0 are pre-release: the site has not been published yet.
+Versions below 1.0.0 are pre-release. The site is published at https://funeetools.github.io/EEcalc/.
 
-## [Unreleased]
+## [0.2.0] - 2026-11-26
+
+### Added
+- **Title bar** at the top of every calculator's inputs pane: the calculator's name and a version
+  button (the version used to sit in the inputs toolbar).
+- **Other versions of a calculator**: separate calculators with ids `<id>@<key>`, their own files under
+  `src/calculators/<dir>/versions/<key>/`, own saved inputs and NOTES.md, reached from the version
+  button's menu and left out of the menus and the finder (style guide §13a). First one: **Voltage
+  Divider (Basic)**, `power/voltage-divider@basic` 0.1.0, the bare unloaded divider.
+- **Workbook** (header menu, and Settings → Workbook): save the open calculation, rename, reopen,
+  download or delete saved calculations, the recent-calculators history with inputs as last left, and
+  download / upload of the whole workbook or a single calculation as JSON (uploads merge). Stored in
+  localStorage under `eecalc:workbook` (style guide §13b). New setting: Keep history.
+- AI API 0.2.0: `getWorkbook()`, `saveCalculation(id?, name?)`, `loadSaved(idOrName)` (also as WebMCP
+  tools); `listCalculators` and `describe` list other versions, and every call accepts their ids.
+
+## [0.1.0] - 2026-11-26 (published)
+
+First numbered and first published version. Everything built so far is labelled 0.1.0: the site, the
+AI API (`window.eeCalc.version`) and every ready calculator.
 
 ### Added
 - 8 Power Electronics calculators (0.1.0 each, with NOTES.md): boost converter, switching-regulator
@@ -21,6 +40,14 @@ Versions below 1.0.0 are pre-release: the site has not been published yet.
 - Battery Life and Battery Charge Time (Power Electronics, 0.1.0, reviewed and fixed).
 - `NOTES.md` for every calculator (107): the 77 older pages' notes were reconstructed from the project
   transcripts and the code, with "reason not recorded" where no reason survives.
+- Version numbers: the site version (header, `window.eeCalc.siteVersion`), the API version
+  (`window.eeCalc.version`) and a per-calculator version (inputs toolbar, theory section,
+  `eeCalc.describe(id).version`). A test keeps the site version equal to `package.json`.
+- `NOTES.md` design notes for the 20 General Electronics calculators.
+- 97 ready calculators (of 258 planned) across RF, PCB (all 36), power, signal, antenna, General Electronics
+  (all 24), communications, thermal, motor, EMC, sensor, unit conversion and audio.
+- Graphs draw a darker x = 0 / y = 0 line on linear axes, with a bold, slightly larger 0 tick label;
+  `zeroLine: false` turns it off for one axis.
 
 ### Changed
 - Renamed the site to **EEcalc**: header, page titles, docs, the AI API (now `window.eeCalc`), the
@@ -31,18 +58,3 @@ Versions below 1.0.0 are pre-release: the site has not been published yet.
   external site, and references to the external calculator site were removed from code, docs and notes.
 - Form `apply` hooks are documented as running after the new value is stored (the old value is not
   available), after a dead branch of that kind was found in Battery Charge Time.
-
-## [0.1.0] - 2026-11-26
-
-First numbered version. Everything built so far is labelled 0.1.0: the site, the AI API
-(`window.eeCalc.version`) and every ready calculator.
-
-### Added
-- Version numbers: the site version (header, `window.eeCalc.siteVersion`), the API version
-  (`window.eeCalc.version`) and a per-calculator version (inputs toolbar, theory section,
-  `eeCalc.describe(id).version`). A test keeps the site version equal to `package.json`.
-- `NOTES.md` design notes for the 20 General Electronics calculators.
-- 97 ready calculators (of 258 planned) across RF, PCB (all 36), power, signal, antenna, General Electronics
-  (all 24), communications, thermal, motor, EMC, sensor, unit conversion and audio.
-- Graphs draw a darker x = 0 / y = 0 line on linear axes, with a bold, slightly larger 0 tick label;
-  `zeroLine: false` turns it off for one axis.

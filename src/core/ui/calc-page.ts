@@ -2,8 +2,9 @@
  * The standard calculator page:
  *
  *   ┌────────────┬────────────────────────────────────┐
- *   │            │ Diagram|Graph · graph tabs · CSV    │
- *   │  inputs    │ diagram (default) or graph         │   ← fills one screen
+ *   │ title  vX  │ Diagram|Graph · graph tabs · CSV    │
+ *   ├────────────┤ diagram (default) or graph         │   ← fills one screen
+ *   │  inputs    │                                    │
  *   │ (scrolls)  ├────────────────────────────────────┤
  *   │            │ Results | Tables | Notes | …       │
  *   └────────────┴────────────────────────────────────┘
@@ -16,6 +17,8 @@ import { h, clear } from './dom';
 
 export interface CalcSlots {
   root: HTMLElement;
+  /** The calculator's name and version button, above the inputs toolbar */
+  titleBar: HTMLElement;
   inputs: HTMLElement;
   /** Toolbar row at the top of the inputs pane (reset, examples…) */
   inputsToolbar: HTMLElement;
@@ -96,6 +99,7 @@ export class InfoTabs {
 
 export function buildCalcPage(container: HTMLElement): CalcSlots {
   clear(container);
+  const titleBar = h('div', { class: 'pane calc-titlebar' });
   const inputsToolbar = h('div', { class: 'inputs-toolbar' });
   const inputs = h('div', { class: 'inputs-body' });
   const graphBar = h('div', { class: 'graph-bar' });
@@ -109,12 +113,13 @@ export function buildCalcPage(container: HTMLElement): CalcSlots {
     h(
       'div',
       { class: 'calc-main' },
-      h('aside', { class: 'pane pane-inputs' }, inputsToolbar, inputs),
+      // The title and the inputs are two cards, one above the other, in the left column.
+      h('aside', { class: 'pane-inputs' }, titleBar, h('div', { class: 'pane inputs-card' }, inputsToolbar, inputs)),
       h('section', { class: 'pane pane-graph' }, graphBar, graph),
       info.el,
     ),
     h('section', { class: 'theory' }, theory),
   );
   container.appendChild(root);
-  return { root, inputs, inputsToolbar, graphBar, graph, info, theory };
+  return { root, titleBar, inputs, inputsToolbar, graphBar, graph, info, theory };
 }

@@ -9,6 +9,7 @@
 Resistive divider V_out = V_in·R₂/(R₁+R₂) with an optional load R_L: solve V_out, R₁, R₂ or V_in; Thévenin output resistance, currents and power in each resistor, best standard-value pairs, worst-case and RSS spread from resistor tolerance, three graphs.
 Requested by the user on 2026-11-22: "Make sure one of them is the resistive voltage divider" (among the 20 added that day). The coordinator's brief called it the page that "matters most to the user — make it excellent" (that wording is the coordinator's, not a quote from the user).
 Not covered: op-amp buffering, capacitive or reactive dividers, resistor noise. Other pages import from this model (see below), so it is shared code.
+This is the **Standard** version. A second, separate calculator, **Basic** (`power/voltage-divider@basic`, files in `versions/basic/`, its own NOTES.md), is the bare unloaded divider; it was added by the user's request on 2026-11-26 to demonstrate other versions (style guide §13a). It imports nothing from this folder, so changes here never reach it.
 
 ## Model and why
 - Kirchhoff/Ohm only (Horowitz & Hill 3e §1.2.3, §1.2.5 Thévenin). With a load, R₂ is replaced by R₂∥R_L. All four solves are exact closed-form inverses of one `vOut()` function, so a solved value round-trips.

@@ -48,6 +48,14 @@ await eeCalc.getGraphData('signal/filter-designer', 'response', { format: 'csv' 
 await eeCalc.compute('signal/filter-designer', { solveFor: 'n', fs: '150 MHz', as: 50 })
 await eeCalc.compute('rf/noise-figure-cascade', { solveFor: 'nfStage', solveStage: 1, nfTotal: 2 })
 
+// other versions of a calculator: "&lt;id&gt;@&lt;key&gt;"
+await eeCalc.compute('power/voltage-divider@basic', { solveFor: 'vout', vin: 12, r1: '30k', r2: '10k' })
+
+// the user's workbook (saved calculations in this browser)
+eeCalc.getWorkbook()
+await eeCalc.saveCalculation('power/voltage-divider', '12 V to 3.3 V ADC')
+await eeCalc.loadSaved('12 V to 3.3 V ADC')
+
 eeCalc.help()   // short text summary</pre>
 
   <h2>2 · Values and units</h2>

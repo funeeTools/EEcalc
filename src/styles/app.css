@@ -256,14 +256,48 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
   min-width: 0; min-height: 0;
 }
-.pane-inputs { grid-row: 1 / 3; display: flex; flex-direction: column; overflow: hidden; }
+/* Left column: the title card above the inputs card */
+.pane-inputs { grid-row: 1 / 3; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.inputs-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Title card: the calculator's name and version button (style guide §13a) */
+.calc-titlebar { flex: none; position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 12px 8px; }
+.calc-title {
+  margin: 0; font-size: 16px; font-weight: 700; color: var(--accent); line-height: 1.25;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: auto;
+}
+.version-tag {
+  flex: 0 0 auto; font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 10px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border);
+}
+.version-tag.alt { background: var(--amber-soft); color: var(--warn); border-color: var(--warn-border); }
+.version-btn {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
+  font: 12px var(--font); font-variant-numeric: tabular-nums; color: var(--muted);
+  background: none; border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px;
+}
+.version-btn:hover, .version-btn[aria-expanded='true'] { color: var(--accent); border-color: var(--border-strong); background: var(--panel-2); }
+.version-btn.alt { color: var(--warn); border-color: var(--warn-border); }
+.version-caret { font-size: 10px; }
+.version-pop {
+  position: absolute; z-index: 15; top: calc(100% - 2px); right: 8px; width: min(300px, calc(100% - 16px));
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.vp-head { font-size: 11.5px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 6px 4px; }
+.vp-row { display: flex; align-items: baseline; gap: 8px; padding: 5px 6px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 13px; }
+a.vp-row:hover { background: var(--panel-2); color: var(--accent); }
+.vp-row.here { background: var(--accent-soft); }
+.vp-ver { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 44px; }
+.vp-label { font-weight: 600; }
+.vp-note { font-size: 11px; color: var(--muted); }
+.vp-here { margin-left: auto; color: var(--accent); }
+.vp-foot { margin: 4px 6px 2px; font-size: 11.5px; color: var(--muted); }
 .inputs-toolbar {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border);
   background: var(--panel-2); border-radius: var(--radius) var(--radius) 0 0;
 }
 .toolbar-title { font-weight: 650; }
 .toolbar-hint { color: var(--muted); font-size: 12px; margin-right: auto; }
-.toolbar-version { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .theory-version { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
 .inputs-body { overflow-y: auto; padding: 4px 8px 24px; flex: 1; overscroll-behavior: contain; }
 .pane-graph { display: flex; flex-direction: column; padding: 6px 8px 4px; }
@@ -603,6 +637,60 @@ button, input, select { font: inherit; color: inherit; }
 .set-select { flex: 0 0 120px; height: 30px; }
 .set-check { width: 18px; height: 18px; accent-color: var(--accent); }
 
+/* ───────────── Workbook (header menu) ───────────── */
+.brand-row { position: relative; }
+.wb-btn {
+  display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; cursor: pointer; font: 12.5px var(--font);
+  background: none; color: var(--accent-ink); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 7px; opacity: 0.85;
+}
+.wb-btn:hover, .wb-btn[aria-expanded='true'] { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+.wb-icon { font-size: 14px; line-height: 1; }
+.wb-caret { font-size: 10px; opacity: 0.8; }
+.wb-menu {
+  position: absolute; z-index: 30; top: calc(100% + 2px); right: 10px; width: min(380px, calc(100vw - 20px));
+  max-height: min(640px, calc(100vh - 70px)); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--border-strong); border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25); padding: 10px; font-size: 13px;
+}
+.wb-head { display: flex; gap: 6px; margin-bottom: 8px; }
+.wb-name {
+  flex: 1; min-width: 0; font: 650 15px var(--font); color: var(--accent); background: none;
+  border: 1px solid transparent; border-radius: 6px; padding: 3px 6px;
+}
+.wb-name:hover { border-color: var(--border); }
+.wb-name:focus { border-color: var(--accent); background: var(--field-bg); outline: none; }
+.wb-save { width: 100%; padding: 6px 10px; font-weight: 600; }
+.wb-section { margin: 12px 4px 4px; font-size: 11.5px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.wb-empty { margin: 2px 6px 4px; color: var(--muted); font-size: 12.5px; }
+.wb-row { display: flex; align-items: center; gap: 2px; border-radius: 7px; }
+.wb-row:hover { background: var(--panel-2); }
+.wb-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
+  background: none; border: none; padding: 5px 6px; cursor: pointer; color: inherit; font: inherit; border-radius: 7px;
+}
+.wb-main:disabled { cursor: default; opacity: 0.6; }
+.wb-title { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-row:hover .wb-title, .wb-recent:hover .wb-title { color: var(--accent); }
+.wb-meta, .wb-when { color: var(--muted); font-size: 11.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-row.editing .wb-main { cursor: default; }
+.wb-rename { width: 100%; font: 600 13px var(--font); padding: 3px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--field-bg); color: var(--ink); }
+.wb-icon-btn {
+  flex: 0 0 auto; width: 26px; height: 26px; border: none; background: none; border-radius: 6px; cursor: pointer;
+  color: var(--muted); font-size: 13px; opacity: 0.55;
+}
+.wb-row:hover .wb-icon-btn, .wb-icon-btn:focus-visible { opacity: 1; }
+.wb-icon-btn:hover { background: var(--panel); color: var(--accent); box-shadow: 0 0 0 1px var(--border); }
+.wb-more, .wb-link { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 12.5px; padding: 3px 6px; }
+.wb-link { font-weight: 600; text-decoration: underline; }
+.wb-recent { display: flex; align-items: baseline; gap: 8px; padding: 5px 6px; border-radius: 7px; color: var(--ink); text-decoration: none; }
+.wb-recent:hover { background: var(--panel-2); }
+.wb-recent .wb-title { flex: 1; min-width: 0; font-weight: 550; }
+.wb-recent.here .wb-title::after { content: ' · open'; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+.wb-foot { display: flex; gap: 6px; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.wb-status { margin: 8px 4px 0; font-size: 12.5px; color: var(--ink); background: var(--panel-2); border-radius: 6px; padding: 6px 8px; }
+.set-text { flex: 0 0 200px; height: 30px; text-align: left; }
+.set-buttons { display: flex; gap: 6px; flex: 0 0 auto; }
+
 /* ───────────── Phone / narrow ───────────── */
 @media (max-width: 900px) {
   body { font-size: 15px; }
@@ -610,7 +698,8 @@ button, input, select { font: inherit; color: inherit; }
   .brand-name { font-size: 15px; }
   .brand-name, .brand-version, .crumb-cat { display: none; }
   .finder-btn { min-width: 0; padding: 6px 10px; }
-  .finder-label, .finder-btn kbd { display: none; }
+  .finder-label, .finder-btn kbd, .wb-label { display: none; }
+  .wb-btn { padding: 0 8px; }
   .finder-icon { font-size: 18px; }
   .cat-tabs { padding: 2px 6px 0; }
   .cat-tab { padding: 7px 11px 8px; }
@@ -624,7 +713,8 @@ button, input, select { font: inherit; color: inherit; }
   .graph-host.graph-paired.graph-show-diagram { height: 330px; }
   .graph-paired .graph-main { right: 0; bottom: 50%; }
   .graph-paired .graph-side { left: 0; top: 52%; }
-  .pane-inputs { order: 2; overflow: visible; }
+  .pane-inputs { order: 2; gap: 6px; }
+  .inputs-card { overflow: visible; }
   .inputs-body { overflow: visible; }
   .pane-info { order: 3; overflow: visible; }
   .info-body { overflow: visible; }

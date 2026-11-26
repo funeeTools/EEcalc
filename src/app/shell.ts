@@ -7,15 +7,17 @@
  * and for agents that can only open URLs.
  */
 
-import { CalcController } from '@/core/calc/page';
-import { h, clear, storage } from '@/core/ui/dom';
+import { CalcController, normalizeState, type PageInfo } from '@/core/calc/page';
+import { h, clear, debounce, storage } from '@/core/ui/dom';
 import { currentTheme } from '@/core/ui/theme';
-import { updateSettings } from '@/core/settings';
+import { settings, updateSettings } from '@/core/settings';
 import { renderPlanned } from './planned';
 import { SettingsPanel } from './settings-panel';
 import { CalcPreview } from './preview';
-import { CATEGORIES, DEFAULT_ROUTE, type CalcEntry, type Category, findCalc } from './registry';
+import { CATEGORIES, DEFAULT_ROUTE, type CalcEntry, type Category, findCalc, lookupCalc } from './registry';
 import { APP_VERSION } from './version';
+import { setWorkbook, touchRecent, workbook } from './workbook';
+import { WorkbookMenu, type WorkbookHost } from './workbook-menu';
 
 interface Route {
   cat: string;
@@ -26,11 +28,12 @@ interface Route {
 const LAST_CALC_KEY = 'eecalc:lastCalcByCategory';
 
 function parseHash(): Route | null {
-  const m = location.hash.match(/^#\/([\w-]+)(?:\/([\w-]+))?\/?(?:\?(.*))?$/);
+  // The slug may name another version of a calculator: #/power/voltage-divider@basic
+  const m = location.hash.match(/^#\/([\w-]+)(?:\/([\w-]+(?:@[\w.-]+)?))?\/?(?:\?(.*))?$/);
   if (!m) return null;
   const cat = CATEGORIES.find((c) => c.id === m[1]);
   if (!cat) return null;
-  const calc = m[2] && cat.calcs.some((c) => c.slug === m[2]) ? m[2] : firstCalcFor(cat);
+  const calc = m[2] && findCalc(cat.id, m[2]) ? m[2] : firstCalcFor(cat);
   const query: Record<string, string> = {};
   if (m[3]) for (const [k, v] of new URLSearchParams(m[3])) query[k] = v;
   return { cat: cat.id, calc, query };
@@ -52,6 +55,7 @@ export class Shell {
   private crumb!: HTMLElement;
   private finder!: Finder;
   private settingsPanel!: SettingsPanel;
+  workbookMenu!: WorkbookMenu;
   private preview = new CalcPreview();
   private route: Route = { ...DEFAULT_ROUTE, query: {} };
   private mountToken = 0;
@@ -74,8 +78,33 @@ export class Shell {
       }
       if (e.key === 'Escape' && this.menuCat) this.closeMenu();
     });
+    // History: the last calculators used, with their inputs as last left (one entry per calculator).
+    const record = debounce((calcId: string) => {
+      const ctl = this.controller;
+      if (!settings().history || !ctl || ctl.calcId !== calcId) return;
+      setWorkbook(touchRecent(workbook(), calcId, ctl.def.version, ctl.state));
+    }, 1000);
+    window.addEventListener('ee:report', (e) => record((e as CustomEvent<{ calcId: string }>).detail.calcId));
     this.onRoute();
   }
+
+  /** What the workbook needs from the app: the open calculation, and a way to reopen one. */
+  readonly workbookHost: WorkbookHost = {
+    current: () => {
+      const ctl = this.controller;
+      if (!ctl) return null;
+      return { calc: ctl.calcId, title: displayTitle(lookupCalc(ctl.calcId)?.calc) ?? ctl.title, version: ctl.def.version, inputs: ctl.state };
+    },
+    load: async (calc, inputs) => {
+      await this.open(calc);
+      const ctl = this.controller;
+      if (ctl?.calcId === calc) ctl.replaceState(normalizeState(ctl.def, structuredClone(inputs)));
+    },
+    titleOf: (calc) => {
+      const hit = lookupCalc(calc);
+      return hit?.calc.id === calc && hit.calc.load ? displayTitle(hit.calc) : null;
+    },
+  };
 
   /** Navigate to a calculator and resolve once it is mounted. */
   async open(id: string): Promise<void> {
@@ -100,7 +129,8 @@ export class Shell {
     this.content = h('main', { class: 'content' });
     this.crumb = h('span', { class: 'crumb' });
     this.finder = new Finder((id) => (location.hash = `#/${id}`));
-    this.settingsPanel = new SettingsPanel();
+    this.workbookMenu = new WorkbookMenu(this.workbookHost);
+    this.settingsPanel = new SettingsPanel(this.workbookHost);
     const themeBtn = h('button', {
       class: 'hdr-icon-btn theme-btn',
       type: 'button',
@@ -132,7 +162,9 @@ export class Shell {
           h('span', { class: 'finder-label' }, 'Find calculator…'),
           h('kbd', null, 'Ctrl K'),
         ),
+        this.workbookMenu.button,
         h('button', { class: 'hdr-icon-btn settings-btn', type: 'button', title: 'Settings', 'aria-label': 'Settings', onclick: () => this.settingsPanel.open() }, '⚙'),
+        this.workbookMenu.el,
       ),
       this.catBar,
       this.calcBar,
@@ -227,8 +259,9 @@ export class Shell {
     this.syncCatTabs();
     const found = findCalc(catId, slug);
     clear(this.crumb);
-    if (found) this.crumb.append(h('span', { class: 'crumb-cat' }, `${found.cat.title} › `), h('span', { class: 'crumb-calc' }, found.calc.title));
-    document.title = found ? `${found.calc.title} · EEcalc` : 'EEcalc';
+    const name = found ? displayTitle(found.calc)! : '';
+    if (found) this.crumb.append(h('span', { class: 'crumb-cat' }, `${found.cat.title} › `), h('span', { class: 'crumb-calc' }, name));
+    document.title = found ? `${name} · EEcalc` : 'EEcalc';
   }
 
   /** Fill the menu with the open category's calculators: ready ones as buttons, planned ones folded away. */
@@ -237,7 +270,8 @@ export class Shell {
     clear(this.calcBar);
     this.preview.hide();
     if (!cat) return;
-    const slug = this.route.cat === cat.id ? this.route.calc : '';
+    // Another version of a calculator highlights its default's tab.
+    const slug = this.route.cat === cat.id ? this.route.calc.split('@')[0] : '';
     const ready = cat.calcs.filter((c) => c.load);
     const planned = cat.calcs.filter((c) => !c.load);
     const tab = (c: CalcEntry) => {
@@ -282,7 +316,7 @@ export class Shell {
     try {
       const mod = (await calc.load()).default;
       if (token !== this.mountToken) return;
-      this.controller = new CalcController(this.content, calc.id, calc.title, mod, this.route.query);
+      this.controller = new CalcController(this.content, calc.id, calc.title, mod, this.route.query, pageInfo(calc));
     } catch (err) {
       clear(this.content);
       this.content.appendChild(h('div', { class: 'error-card' }, h('h2', null, 'Could not load this calculator'), h('pre', null, String(err))));
@@ -291,6 +325,22 @@ export class Shell {
       this.content.classList.remove('loading');
     }
   }
+}
+
+/** "Voltage Divider", or "Voltage Divider (Basic)" for a version other than the default */
+function displayTitle(calc: CalcEntry | undefined): string | null {
+  if (!calc) return null;
+  return calc.baseId ? `${calc.title} (${calc.versionLabel})` : calc.title;
+}
+
+/** What the title bar's version menu needs: this version's name and the other versions. */
+function pageInfo(calc: CalcEntry): PageInfo {
+  if (!calc.versions?.length) return {};
+  return {
+    versionLabel: calc.versionLabel,
+    isDefault: !calc.baseId,
+    versions: calc.versions.map((v) => ({ id: v.id, label: v.versionLabel ?? v.title, isDefault: !v.baseId, version: async () => (await v.load!()).default.def.version })),
+  };
 }
 
 /** Horizontally scroll a tab strip so `el` is visible — without scrolling the page. */

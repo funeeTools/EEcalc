@@ -54,6 +54,36 @@ export function debounce<A extends unknown[]>(fn: (...a: A) => void, ms: number)
   };
 }
 
+/** Save text as a file in the user's downloads (CSV, workbook JSON…). */
+export function downloadFile(name: string, text: string, type: string): void {
+  const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/** Ask the user for one file and read it as text; resolves null when they cancel. */
+export function pickTextFile(accept: string): Promise<{ name: string; text: string } | null> {
+  return new Promise((resolve) => {
+    const input = h('input', { type: 'file', accept, style: { display: 'none' } });
+    input.addEventListener('change', async () => {
+      const f = input.files?.[0];
+      input.remove();
+      if (!f) return resolve(null);
+      // Workbooks are small text files; anything this large is not one.
+      if (f.size > 20e6) return resolve({ name: f.name, text: '' });
+      resolve({ name: f.name, text: await f.text() });
+    });
+    input.addEventListener('cancel', () => {
+      input.remove();
+      resolve(null);
+    });
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
 export const storage = {
   get<T>(key: string, fallback: T): T {
     try {

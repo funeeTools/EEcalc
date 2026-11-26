@@ -21,7 +21,8 @@ import { applyDefValues, describeFields } from '@/core/calc/fields';
 import { type CalcModule, freshDefaults, graphToCsv, loadSavedState, normalizeState, runCompute, stateKeyFor } from '@/core/calc/page';
 import type { CalcReport, GraphSpec } from '@/core/calc/types';
 import { storage } from '@/core/ui/dom';
-import { ALL_CALCS, CATEGORIES, lookupCalc } from './registry';
+import { CATEGORIES, lookupCalc } from './registry';
+import { addSaved, setWorkbook, workbook } from './workbook';
 import type { Shell } from './shell';
 import { API_VERSION, APP_VERSION } from './version';
 
@@ -101,6 +102,8 @@ export function createApi(shell: Shell) {
         'setInputs(id, values, {open?, includeGraphs?}) → updates saved inputs (and the page if open), returns report.',
         'getResults(id?, opts) → report for the open or saved state. getGraphData(id, graphId?, {maxPoints?, format:"json"|"csv"}).',
         'open(id, {graph?, view?:"diagram"|"graph", tab?}) navigates the UI. reset(id). current() → open calculator. loadExample(id, exampleId).',
+        'Other versions of a calculator have ids "<id>@<key>" (listed under versions in listCalculators/describe) and work in every call.',
+        'Workbook: getWorkbook() → saved calculations and recent calculators. saveCalculation(id?, name?) saves inputs; loadSaved(savedIdOrName) opens one.',
         'Solve-for-X: values {solveFor:"W", Z0:50} makes W the unknown and Z0 a target input.',
       ].join('\n');
     },
@@ -111,7 +114,7 @@ export function createApi(shell: Shell) {
         title: c.title,
         calculators: c.calcs
           .filter((x) => !o.status || (o.status === 'ready') === !!x.load)
-          .map((x) => ({ id: x.id, title: x.title, status: x.load ? 'ready' : 'planned', blurb: x.blurb || undefined })),
+          .map((x) => ({ id: x.id, title: x.title, status: x.load ? 'ready' : 'planned', blurb: x.blurb || undefined, versions: x.versions?.map((v) => ({ id: v.id, label: v.versionLabel })) })),
       })).filter((c) => c.calculators.length);
     },
 
@@ -123,11 +126,14 @@ export function createApi(shell: Shell) {
       const { id: cid, title, mod } = await moduleFor(id);
       const state = openCtl(cid)?.state ?? loadSavedState(mod.def, cid);
       const report = runCompute(mod.def, structuredClone(state));
-      const entry = ALL_CALCS.find((x) => x.calc.id === cid)!;
+      const entry = lookupCalc(cid)!;
       return {
         id: cid,
         title,
         version: mod.def.version,
+        versionLabel: entry.calc.versionLabel,
+        defaultVersion: entry.calc.baseId,
+        otherVersions: entry.calc.versions?.map((v) => ({ id: v.id, label: v.versionLabel })),
         category: entry.cat.title,
         blurb: entry.calc.blurb,
         method: mod.def.method,
@@ -212,6 +218,35 @@ export function createApi(shell: Shell) {
       return api.getResults(cid);
     },
 
+    /** The workbook: saved calculations (without their inputs) and recent calculators. */
+    getWorkbook() {
+      const wb = workbook();
+      return {
+        name: wb.name,
+        saved: wb.saved.map(({ id, name, calc, calcVersion, savedAt }) => ({ id, name, calc, calcVersion, savedAt })),
+        recent: wb.recent.map(({ calc, at }) => ({ calc, at })),
+      };
+    },
+
+    /** Save a calculator's current inputs (the open one if id is omitted) to the workbook. */
+    async saveCalculation(id?: string, name?: string) {
+      const { id: cid, title, mod } = await moduleFor(id ?? shell.currentId);
+      const state = openCtl(cid)?.state ?? loadSavedState(mod.def, cid);
+      const { wb, saved } = addSaved(workbook(), { name: name ?? `${title} · ${new Date().toLocaleString()}`, calc: cid, calcVersion: mod.def.version, inputs: state });
+      const stored = setWorkbook(wb);
+      return { id: saved.id, name: saved.name, calc: saved.calc, stored };
+    },
+
+    /** Open a saved calculation (by its id or exact name) and return its results. */
+    async loadSaved(savedIdOrName: string) {
+      const wb = workbook();
+      const s = wb.saved.find((x) => x.id === savedIdOrName) ?? wb.saved.find((x) => x.name === savedIdOrName);
+      if (!s) throw new Error(`No saved calculation "${savedIdOrName}". getWorkbook() lists them.`);
+      await moduleFor(s.calc);
+      await shell.workbookHost.load(s.calc, s.inputs);
+      return api.getResults(s.calc);
+    },
+
     async loadExample(id: string, exampleId: string) {
       const { id: cid, mod } = await moduleFor(id);
       const ex = mod.def.examples?.find((e) => e.id === exampleId);
@@ -292,6 +327,25 @@ export async function registerWebMcp(api: EeCalcApi): Promise<'document' | 'navi
       description: 'Show a calculator in the page (optionally a graph id, the graph pane view "diagram" or "graph", or an info tab id).',
       inputSchema: { type: 'object', properties: { id: idProp, graph: { type: 'string' }, view: { type: 'string', enum: ['diagram', 'graph'] }, tab: { type: 'string' } }, required: ['id'] },
       execute: async (a: any) => json(await api.open(a.id, a)),
+    },
+    {
+      name: 'ee_get_workbook',
+      description: 'The user\'s workbook in this browser: saved calculations (id, name, calculator) and recently used calculators.',
+      inputSchema: { type: 'object', properties: {} },
+      annotations: { readOnlyHint: true },
+      execute: async () => json(api.getWorkbook()),
+    },
+    {
+      name: 'ee_save_calculation',
+      description: 'Save a calculator\'s current inputs to the workbook under a name.',
+      inputSchema: { type: 'object', properties: { id: idProp, name: { type: 'string' } } },
+      execute: async (a: any) => json(await api.saveCalculation(a?.id, a?.name)),
+    },
+    {
+      name: 'ee_load_saved',
+      description: 'Open a saved calculation from the workbook (by its id or exact name) and return its results.',
+      inputSchema: { type: 'object', properties: { saved: { type: 'string', description: 'Saved calculation id or name (see ee_get_workbook)' } }, required: ['saved'] },
+      execute: async (a: any) => json(await api.loadSaved(a.saved)),
     },
     {
       name: 'ee_reset_calculator',

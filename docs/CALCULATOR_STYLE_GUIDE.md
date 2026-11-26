@@ -45,6 +45,7 @@ src/calculators/<name>/
   theory.ts   TheoryContent: the long explanation under the calculator (KaTeX)
   index.ts    CalcModule { def, theory, view? } — the only file that may touch the DOM
   NOTES.md    design notes for agents: why it is built this way, and its changelog (§13)
+  versions/<key>/   other versions of this calculator, each a complete calculator of its own (§13a)
 ```
 
 Register it in `READY` in `src/app/registry.ts`, using the id `<category>/<slug>` from the roadmap (`src/app/roadmap.ts`), a one-line
@@ -56,7 +57,8 @@ example computes.
 
 ```
 ┌ Inputs (left, full height) ┬ Graph pane (top right) ──────────────┐
-│ toolbar: Examples… · Reset │ Diagram|Graph · graph tabs · CSV     │
+│ title card: name · v0.1.0 ▾│ Diagram|Graph · graph tabs · CSV     │
+│ toolbar: Examples… · Reset │                                      │
 │ sections of one-line rows  │ diagram (default) or graph           │
 │                            ├ Results | Tables | Notes | (custom)  ┤
 │                            │ Results tab is always first          │
@@ -64,6 +66,8 @@ example computes.
   Theory section below (scroll)
 ```
 
+- The title card above the inputs card names the calculator and holds its version button
+  (§13a). The page draws it from the registry: do not add another title.
 - These three areas fit one screen on a laptop. Do not add content that makes the inputs pane
   scroll for a typical use case. Put rarely used inputs in a collapsed or later section.
 - The diagram tab (Circuit / Cross-section / Diagram, §7a) goes after Notes. Other custom tabs
@@ -540,8 +544,8 @@ make a design choice or fix a bug. Keep it short: 40–90 lines.
 
 There are three kinds of version:
 
-- **Each calculator** has `version` in its `def.ts`. It is shown in the inputs toolbar, the theory
-  section and `eeCalc.describe(id)`. Bump it in every change to that calculator, and add a line to
+- **Each calculator** has `version` in its `def.ts`. It is shown on the version button in the title
+  bar, in the theory section and in `eeCalc.describe(id)`. Bump it in every change to that calculator, and add a line to
   the `## Changelog` in its `NOTES.md`: `- 0.1.1 (YYYY-MM-DD) — what changed and why`.
 - **The site** is `APP_VERSION` in `src/app/version.ts`, kept equal to `package.json` (a test checks
   it). It is shown in the header. Bump it for changes to the shell, the core, the styles or the set of
@@ -553,4 +557,38 @@ There are three kinds of version:
 
 A new calculator starts at `0.1.0`. A shared-core change that alters what a calculator shows (a new
 graph style, say) bumps the site version, not every calculator.
+
+## 13a. Other versions of a calculator
+
+A calculator can have more than one version: an older major version kept after an overhaul (people
+may rely on its results), or a deliberately different variant (the Basic voltage divider). Each one
+is **a separate calculator in its own right**, reached only from the version button in the title bar.
+
+- **Id and route:** `<category>/<slug>@<key>`, e.g. `power/voltage-divider@basic`. The key is short,
+  lowercase and never changes, because saved calculations, links and agents use the id. For a retired
+  major version use `v1`, `v2`…; for a variant, a word (`basic`). The default version keeps the plain id.
+- **Files:** `src/calculators/<dir>/versions/<key>/` with its own `def.ts`, `index.ts`, `theory.ts`
+  (and `model.ts` if needed) and `NOTES.md`. It imports only `@/core/…` and its own files, never the
+  default version beside it, so editing the default can never change it (a test checks this). When
+  you retire a major version, **copy** its files into `versions/v<N>/` (change `def.id` to the new id)
+  before overhauling the default.
+- **Registry:** list it under `versions` of the default's `READY` entry (`key`, `label`, `blurb`,
+  `load`) and give the default a `versionLabel` (e.g. "Standard"). Other versions stay out of the menus
+  and the finder; the API lists them under `versions` / `otherVersions`, and every call accepts their ids.
+- **Own version and state:** each has its own `version` (a new one starts at `0.1.0`), its own saved
+  inputs, its own tests (`tests/calc-<dir>-<key>.test.ts`) and its own changelog in its NOTES.md.
+- **Labels:** the label names the version in the title bar tag, the version menu, the breadcrumb and
+  the tab title ("Voltage Divider (Basic)"). The default's tab title stays plain.
+- A retired major version receives bug fixes (PATCH) only; features go into the default.
+
+## 13b. The workbook
+
+Each browser keeps one workbook (`src/app/workbook.ts`, localStorage key `eecalc:workbook`): saved
+calculations and the recent-calculators history. A saved calculation is the calculator id, its
+version and its state object, the same object the page stores and `eeCalc.setInputs` applies. So a
+calculator needs nothing extra to work with the workbook, as long as its `load()` / `normalizeState`
+accepts a state saved by an earlier version of itself. **When you rename or remove a state key, keep
+reading the old one in `def.load`**, or saved calculations of that calculator stop loading cleanly.
+The file formats (`eecalc-workbook`, `eecalc-calculation`) carry `formatVersion`; bump it and migrate
+in `parseFile` if their shape changes.
 

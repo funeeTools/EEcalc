@@ -21,6 +21,8 @@ export interface Settings {
   confirmReset: boolean;
   /** Significant digits shown in input boxes */
   inputDigits: number;
+  /** Keep the recent-calculators history in the workbook */
+  history: boolean;
 }
 
 export const UNIT_FAMILIES: { key: UnitFamily; label: string; help: string; options: string[] }[] = [
@@ -38,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   remember: true,
   confirmReset: true,
   inputDigits: 6,
+  history: true,
 };
 
 function load(): Settings {

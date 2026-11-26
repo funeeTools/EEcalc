@@ -27,7 +27,8 @@ GitHub Pages: push to `main`; `.github/workflows/pages.yml` tests, builds and de
 A static site cannot host a normal MCP server, so the page is the tool provider (details: `public/ai.html`,
 `public/llms.txt`):
 
-- `window.eeCalc` — list / describe / compute / setInputs / getResults / getGraphData / open / reset.
+- `window.eeCalc` — list / describe / compute / setInputs / getResults / getGraphData / open / reset, and the
+  workbook (getWorkbook / saveCalculation / loadSaved).
 - URL inputs — `#/rf/microstrip-impedance?solveFor=w&z0=50&h=0.508mm`; latest results mirrored as JSON in
   `<script id="ee-report">`.
 - Headless — every calculator is a pure `def.compute(state)`; run it in Node with `npx vite-node script.ts`.
@@ -41,6 +42,14 @@ Before changing an existing calculator, read its `NOTES.md` (design choices made
 
 Semantic Versioning (`MAJOR.MINOR.PATCH`): the site and the AI API in `src/app/version.ts` (site history in
 [CHANGELOG.md](CHANGELOG.md)), and each calculator in its `def.ts` (history in its `NOTES.md`). See §13 of the style guide.
+A calculator can also have other versions (an older major version, or a variant such as the Basic voltage divider):
+separate calculators with ids `<id>@<key>`, reached from the version button beside the page title (§13a).
+
+## Workbook
+
+The **Workbook** menu in the header keeps saved calculations (rename, download, delete) and the recently used
+calculators, in this browser's localStorage. The whole workbook or a single calculation can be downloaded as a
+JSON file and uploaded again; uploads merge and never overwrite (style guide §13b).
 
 ## Layout
 
@@ -50,6 +59,7 @@ src/
   app/registry.ts        which ones are built (lazy imports); everything else is a placeholder page
   app/shell.ts           category tabs → calculator tabs (+ "Planned" menu), routing, Ctrl+K finder
   app/api.ts             window.eeCalc (the AI API)
+  app/workbook.ts        saved calculations and history (localStorage), file import/export; workbook-menu.ts its menu
   core/calc/types.ts     CalcDef (pure: fields, defaults, compute → CalcReport) and the report format
   core/calc/page.ts      CalcController: form → compute → graph pane + Results / Tables / Notes tabs
   core/calc/fields.ts    form spec → machine-readable schema; path-based value setting with units
@@ -57,6 +67,7 @@ src/
   core/form/form.ts      one-line input rows: ◎ solve-for, symbol, label, value, unit dropdown, (i) help
   core/plot/plot.ts      canvas plotter (log axes, dual y, zoom, read-out); core/plot/smith.ts Smith chart
   calculators/<name>/    model.ts (equations) · def.ts (inputs, report, version) · theory.ts · index.ts (page hooks) · NOTES.md
+                         versions/<key>/ other versions of the calculator, each self-contained
 ```
 
 ## Adding a calculator

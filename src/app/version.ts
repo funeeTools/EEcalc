@@ -9,7 +9,7 @@
  */
 
 /** The whole site: shell, core, styles and the set of calculators. */
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 /** The window.eeCalc / WebMCP contract that AI agents program against. */
-export const API_VERSION = '0.1.0';
+export const API_VERSION = '0.2.0';

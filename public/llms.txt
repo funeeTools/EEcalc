@@ -14,6 +14,8 @@
   - `await eeCalc.compute('rf/microstrip-impedance', {solveFor:'w', z0:50, h:'0.508 mm', er:3.66})` → results (headless, page untouched)
   - `await eeCalc.setInputs(id, values, {open:true})` → updates the visible page
   - `await eeCalc.getGraphData(id, graphId, {format:'csv'})`
+  - Other versions of a calculator have ids `<id>@<key>` (e.g. `power/voltage-divider@basic`), listed under `versions` by `listCalculators` and `otherVersions` by `describe`; every call accepts them.
+  - Workbook (the user's saved calculations in this browser): `eeCalc.getWorkbook()`, `await eeCalc.saveCalculation(id?, name?)`, `await eeCalc.loadSaved(savedIdOrName)`
 - The latest results of the open calculator are mirrored as JSON in `<script id="ee-report" type="application/json">`.
 
 ## Ready calculators
