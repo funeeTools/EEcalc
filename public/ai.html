@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EEcalc · AI API</title>
+<style>
+  :root { --bg: #f4f1ea; --panel: #fbfaf6; --ink: #2c2c2c; --ink2: #555049; --accent: #1f4e5f; --border: #d6cfc0; --code: #ece7dc; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { color: var(--accent); margin: 0 0 4px; font-size: 26px; }
+  h2 { color: var(--accent); margin: 30px 0 8px; font-size: 19px; border-top: 1px solid var(--border); padding-top: 18px; }
+  p, li { color: var(--ink2); }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13.5px; }
+  pre { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--ink); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>EEcalc · AI API</h1>
+  <p>EEcalc is a static site, so it cannot run a classic MCP server. Instead the page itself is the tool provider. Everything a person can do on a calculator page — and more (graph arrays, intermediate values) — is available to an agent through one JavaScript API.</p>
+
+
+  <h2>1 · <code>window.eeCalc</code> (any automation that can run page JavaScript)</h2>
+  <p>Works with Playwright / Puppeteer (<code>page.evaluate</code>), browser-extension agents, and DevTools. All methods return plain JSON.</p>
+<pre>// what is there
+eeCalc.listCalculators({ status: 'ready' })
+await eeCalc.describe('rf/microstrip-impedance')
+
+// solve for trace width — headless, page untouched
+await eeCalc.compute('rf/microstrip-impedance',
+  { solveFor: 'w', z0: 50, h: '0.508 mm', t: '35 µm', er: 3.66, f: '2.4 GHz' })
+
+// drive the visible page
+await eeCalc.open('rf/noise-figure-cascade')
+await eeCalc.setInputs('rf/noise-figure-cascade', { 'stages.1.nf': 0.8, bw: '200 kHz' })
+
+// graphs and underlying data
+await eeCalc.getResults(undefined, { includeGraphs: true, maxPoints: 100 })
+await eeCalc.getGraphData('signal/filter-designer', 'response', { format: 'csv' })
+
+// solve-for-X: make any solvable input the unknown
+await eeCalc.compute('signal/filter-designer', { solveFor: 'n', fs: '150 MHz', as: 50 })
+await eeCalc.compute('rf/noise-figure-cascade', { solveFor: 'nfStage', solveStage: 1, nfTotal: 2 })
+
+eeCalc.help()   // short text summary</pre>
+
+  <h2>2 · Values and units</h2>
+  <ul>
+    <li>Numbers are SI (metres, hertz, ohms, farads). Strings may carry engineering prefixes and any of the field's unit choices: <code>"10 mil"</code>, <code>"2.4 GHz"</code>, <code>"4k7"</code>, <code>"47 nF"</code>.</li>
+    <li>Nested inputs use dotted paths: <code>lead.length</code>, <code>groups.0.caps.1.c</code>, <code>stages.2.oip3</code>. A list can be replaced whole: <code>{ stages: [ … ] }</code>.</li>
+    <li>Unit dropdown choices live in the state too (<code>wUnit: "mil"</code>); they only change how values are shown.</li>
+    <li>Every report has <code>results[]</code> (key, label, symbol, SI value, unit, display, solved), <code>warnings[]</code>, <code>notes[]</code>, <code>tables[]</code>, <code>graphs[]</code> and <code>details</code> (intermediate values not shown on the page).</li>
+    <li>Invalid inputs are not applied; they come back in <code>inputErrors</code>.</li>
+  </ul>
+
+  <h2>3 · Link-only agents</h2>
+  <p>Inputs can be passed in the URL hash query and are applied once on load:</p>
+<pre>#/rf/microstrip-impedance?solveFor=w&amp;z0=50&amp;h=0.508mm&amp;er=3.66
+#/rf/smith-chart?specBy=gamma&amp;gMag=0.3&amp;gAng=45</pre>
+  <p>The open calculator's latest results are mirrored as JSON in <code>&lt;script id="ee-report" type="application/json"&gt;</code>, so an agent that can only read the DOM can still read the answer.</p>
+
+  <h2>4 · Running headless (Node)</h2>
+  <p>Calculators are pure TypeScript modules (<code>src/calculators/*/def.ts</code> → <code>def.compute(state)</code>), so the same results are available in Node or tests without a browser — see the repository README.</p>
+  <p><a href="./">← Back to EEcalc</a> · <a href="./llms.txt">llms.txt</a></p>
+</main>
+</body>
+</html>

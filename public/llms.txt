@@ -1,0 +1,25 @@
+# EEcalc
+
+> Local-first electronics / RF calculators (static site). Every calculator is controllable by an AI agent
+> running in the page through `window.eeCalc` (JavaScript), URL inputs and a JSON results mirror.
+> Full guide: ./ai.html
+
+## How to drive it
+
+- Open the site (https://funeetools.github.io/EEcalc/). Routes: `#/<category>/<slug>`, e.g. `#/rf/microstrip-impedance`.
+- Inputs can be given in the URL: `#/rf/microstrip-impedance?solveFor=w&z0=50&h=0.508mm&er=3.66`
+- In JavaScript (Playwright/Puppeteer `page.evaluate`, a browser extension, DevTools):
+  - `eeCalc.listCalculators({status:'ready'})`
+  - `await eeCalc.describe('rf/microstrip-impedance')` → inputs (paths, SI units, unit choices, limits), solve-for options, outputs, graphs
+  - `await eeCalc.compute('rf/microstrip-impedance', {solveFor:'w', z0:50, h:'0.508 mm', er:3.66})` → results (headless, page untouched)
+  - `await eeCalc.setInputs(id, values, {open:true})` → updates the visible page
+  - `await eeCalc.getGraphData(id, graphId, {format:'csv'})`
+- The latest results of the open calculator are mirrored as JSON in `<script id="ee-report" type="application/json">`.
+
+## Ready calculators
+
+- rf/microstrip-impedance — Z₀, εeff, dispersion, loss; solve for W, H, εr or Z₀
+- rf/noise-figure-cascade — Friis NF, gain, IP3, sensitivity; solve a stage's max NF
+- rf/smith-chart — Γ/VSWR/RL from Z or S11, line rotation, L-network matching
+- signal/filter-designer — Butterworth/Chebyshev LC ladders, LP/HP/BP/BS, min order, E-series
+- power/inrush-overshoot — hot-plug inrush and capacitor overshoot (RLC ODE)

@@ -1,0 +1,108 @@
+/*
+ * PCB material colours — the one place to tweak them.
+ * Every PCB diagram (cross-sections, top views, stackups) draws its materials with the classes below,
+ * via src/core/schematic/pcb.ts, so a colour changed here changes it on every calculator.
+ * Each material has a fill and a slightly darker edge; textured materials also have a texture ink.
+ */
+:root {
+  --pcb-mask: #2f7d4a;          /* solder mask (green), over bare laminate */
+  --pcb-mask-edge: #1d5a32;
+  --pcb-mask-cu: #5aa266;       /* solder mask seen over copper (top views): lighter green */
+  --pcb-cu: #c87a45;            /* copper: traces, planes, via barrels */
+  --pcb-cu-edge: #8c4c22;
+  --pcb-gold: #e3b93f;          /* exposed copper with a gold finish (ENIG) */
+  --pcb-gold-edge: #a37d16;
+  --pcb-paste: #a9adb2;         /* solder paste (unreflowed): silver-grey, grainy */
+  --pcb-paste-edge: #6e7277;
+  --pcb-paste-grain: #7f8388;
+  --pcb-solder: #ccd0d4;        /* reflowed solder: smooth, lighter silver */
+  --pcb-solder-edge: #7b8086;
+  --pcb-fr4: #ecdfbc;           /* laminate (FR-4 core / prepreg): light tan, woven glass */
+  --pcb-fr4-edge: #bfae84;
+  --pcb-fr4-weave: #e2d4ac;
+  --pcb-fr4-bare: #c9ad78;      /* exposed laminate surface, no copper or mask: darker tan */
+  --pcb-fr4-bare-edge: #9a7f4b;
+  --pcb-fr4-bare-weave: #bfa36f;
+  --pcb-silk: #ffffff;          /* silkscreen legend */
+  --pcb-silk-edge: #6d6d6d;
+  --pcb-hole: #34373a;          /* drilled hole seen from above (you look through the board) */
+  --pcb-part: #3d4044;          /* component body (epoxy package) */
+  --pcb-part-edge: #222427;
+  --pcb-steel: #8d99a6;         /* stainless stencil foil: cool blue-grey, brushed */
+  --pcb-steel-edge: #56616c;
+  --pcb-steel-brush: #7f8b98;
+  --pcb-coat: #7fb6e0;          /* conformal coating: thin translucent blue film */
+  --pcb-coat-edge: #3d7fb3;
+  --pcb-resin: #7b6f93;         /* non-conductive via plug / fill epoxy: muted violet-grey */
+  --pcb-resin-edge: #4f4566;
+  --pcb-film: #6b3242;          /* resistive film / carbon ink (embedded resistors): dark wine, unlike copper */
+  --pcb-film-edge: #43202a;
+}
+
+:root[data-theme='dark'] {
+  --pcb-mask: #2b6e42;
+  --pcb-mask-edge: #4f9a66;
+  --pcb-mask-cu: #4a8c56;
+  --pcb-cu: #bb7342;
+  --pcb-cu-edge: #e09a66;
+  --pcb-gold: #cfa834;
+  --pcb-gold-edge: #f0cd62;
+  --pcb-paste: #8f9398;
+  --pcb-paste-edge: #c2c6ca;
+  --pcb-paste-grain: #6d7176;
+  --pcb-solder: #b3b7bc;
+  --pcb-solder-edge: #e1e4e7;
+  --pcb-fr4: #a99c7a;
+  --pcb-fr4-edge: #d8c9a2;
+  --pcb-fr4-weave: #9f9271;
+  --pcb-fr4-bare: #94794b;
+  --pcb-fr4-bare-edge: #c2a46e;
+  --pcb-fr4-bare-weave: #8a7045;
+  --pcb-silk: #f4f4f4;
+  --pcb-silk-edge: #9a9a9a;
+  --pcb-hole: #0d0f10;
+  --pcb-part: #45494e;
+  --pcb-part-edge: #74797f;
+  --pcb-steel: #6f7b88;
+  --pcb-steel-edge: #aab5c0;
+  --pcb-steel-brush: #64707d;
+  --pcb-coat: #6aa6d6;
+  --pcb-coat-edge: #8cc3ec;
+  --pcb-resin: #6c6185;
+  --pcb-resin-edge: #a397bf;
+  --pcb-film: #7a3a50;
+  --pcb-film-edge: #c08398;
+}
+
+.pcb { stroke-width: 0.8; stroke-linejoin: round; }
+.pcb-mask { fill: var(--pcb-mask); stroke: var(--pcb-mask-edge); }
+.pcb-mask-cu { fill: var(--pcb-mask-cu); stroke: var(--pcb-mask-edge); }
+.pcb-cu { fill: var(--pcb-cu); stroke: var(--pcb-cu-edge); }
+.pcb-gold { fill: var(--pcb-gold); stroke: var(--pcb-gold-edge); }
+.pcb-paste { fill: var(--pcb-paste); stroke: var(--pcb-paste-edge); }
+.pcb-solder { fill: var(--pcb-solder); stroke: var(--pcb-solder-edge); }
+.pcb-fr4 { fill: var(--pcb-fr4); stroke: var(--pcb-fr4-edge); }
+.pcb-fr4-bare { fill: var(--pcb-fr4-bare); stroke: var(--pcb-fr4-bare-edge); }
+.pcb-silk { fill: var(--pcb-silk); stroke: var(--pcb-silk-edge); }
+.pcb-hole { fill: var(--pcb-hole); stroke: var(--pcb-part-edge); }
+.pcb-air { fill: var(--sch-fill); stroke: var(--border-strong); stroke-dasharray: 3 2; }
+.pcb-part { fill: var(--pcb-part); stroke: var(--pcb-part-edge); }
+.pcb-steel { fill: var(--pcb-steel); stroke: var(--pcb-steel-edge); }
+.pcb-coat { fill: var(--pcb-coat); fill-opacity: 0.22; stroke: var(--pcb-coat-edge); }
+.pcb-resin { fill: var(--pcb-resin); stroke: var(--pcb-resin-edge); }
+.pcb-film { fill: var(--pcb-film); stroke: var(--pcb-film-edge); }
+/* Copper on another layer, seen through the board in a top view (under-passes, buried traces). */
+.pcb-cu-hidden { fill: var(--pcb-cu); fill-opacity: 0.35; stroke: var(--pcb-cu-edge); stroke-dasharray: 3 2; }
+/* Texture overlays (drawn on top of the base fill by pcb.ts) carry no stroke of their own. */
+.pcb-tex { stroke: none; pointer-events: none; }
+.pcb-ink-weave { fill: var(--pcb-fr4-weave); }
+.pcb-ink-weave-bare { fill: var(--pcb-fr4-bare-weave); }
+.pcb-ink-grain { fill: var(--pcb-paste-grain); }
+.pcb-ink-brush { fill: var(--pcb-steel-brush); }
+/* Tones on a material: keep its colour, mark it with the outline. Mark a solved dimension with its green
+   dimension line and label instead when the shape is thin (an outline would hide a thin trace). */
+.pcb.pcb-solved { stroke: var(--solved); stroke-width: 2; }
+.pcb.pcb-hl { stroke: var(--red-line); stroke-width: 2; }
+/* Text drawn over materials: a halo in the background colour keeps it readable on any fill. */
+.sch-halo { paint-order: stroke fill; stroke: var(--sch-fill); stroke-width: 3.2px; stroke-linejoin: round; }
+.pcb-legend-text { font-size: 10.5px; fill: var(--ink-2); }

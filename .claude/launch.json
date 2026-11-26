@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "eecalc", "runtimeExecutable": "bash", "runtimeArgs": ["-c", "PATH=$HOME/.local/node/bin:$PATH npx vite --port 5180 --strictPort"], "port": 5180 }
+  ]
+}
