@@ -1,30 +1,20 @@
 # EEcalc
 
-Launch the EEcalc webapp--> [https://funeetools.github.io/EEcalc/](https://funeetools.github.io/EEcalc/)
+Launch the EEcalc webapp here! --> [https://funeetools.github.io/EEcalc/](https://funeetools.github.io/EEcalc/)
 
-Local-first electronics and RF calculators, built on the layout of the EE Calculator app: inputs on the left, a live graph top-right, tabbed results below it, and
-theory & equations below the fold. Everything runs in the browser (TypeScript, no server), so it works offline
+EEcalc is a localy run Webapp for electronics calculations. 
+Standerdised layout with inputs on the left, a live graph or diagram top-right, tabbed results below it.
+Theory & equations below the fold. Everything runs in the browser (TypeScript, no server), so it works offline
 and is hosted as static files on GitHub Pages.
 
-Every equation is implemented from primary sources (cited on each page) and checked by unit tests and
-independent reviews. Other calculators are used only as feature checklists, never as ground truth.
-
-## Run
-
-```bash
-export PATH=~/.local/node/bin:$PATH   # Node 22 lives here on this machine
-npm install
-npm run dev          # http://localhost:5173
-npm test             # unit tests (models, solver, API parsing)
-npm run build        # static site in dist/
-```
-
-GitHub Pages: push to `main`; `.github/workflows/pages.yml` tests, builds and deploys `dist/`
-(enable *Settings → Pages → Source: GitHub Actions* once).
+## How can I trust a AI Generated calulator???
+Every equation is implemented from primary sources (cited on each page) and checked by many unit tests and
+independent reviews. Calcuators are also tested against other online calulcators as a sanity check.
 
 ## AI control
 
-A static site cannot host a normal MCP server, so the page is the tool provider (details: `public/ai.html`,
+A static site cannot host a normal MCP server, instead it can be used with the Playright MCP
+(details: `public/ai.html`,
 `public/llms.txt`):
 
 - `window.eeCalc` — list / describe / compute / setInputs / getResults / getGraphData / open / reset, and the
